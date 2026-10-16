@@ -63,6 +63,11 @@ const routes = [
         name: 'dashboard',
         component: () => import('@/views/Dashboard.vue'),
       },
+      {
+        path: 'events',
+        name: 'dashboard-events',
+        component: () => import('@/views/EventManagement.vue'),
+      },
     ],
   },
 ]
