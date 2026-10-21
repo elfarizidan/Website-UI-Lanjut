@@ -1,64 +1,14 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useEvents } from '@/composables/useEvents'
 import SearchBar from '@/components/event/SearchBar.vue'
 import CategoryFilter from '@/components/event/CategoryFilter.vue'
 import EventCard from '@/components/event/EventCard.vue'
+import AppButton from '@/components/ui/AppButton.vue'
 
 const router = useRouter()
-
-const events = [
-  {
-    id: 1,
-    title: 'Vue.js Mastery Workshop',
-    date: 'Oct 12, 2026',
-    loc: '📍 Tech Hub, Jakarta',
-    cat: 'Workshop',
-    desc: 'Learn advanced Vue 3 concepts, Composition API, and state management to build high-performance web applications interactively.',
-  },
-  {
-    id: 2,
-    title: 'National Tech Meetup',
-    date: 'Oct 15, 2026',
-    loc: '📍 Main Auditorium, City Center',
-    cat: 'Meetup',
-    desc: 'A gathering of hundreds of developers and tech enthusiasts to share the latest industry trends and expand professional networks.',
-  },
-  {
-    id: 3,
-    title: 'Startup Pitch Competition',
-    date: 'Nov 02, 2026',
-    loc: '📍 Innovation Center',
-    cat: 'Competition',
-    desc: 'Watch the best local startup founders pitch their innovative ideas live in front of a panel of renowned investors.',
-  },
-  {
-    id: 4,
-    title: 'UI/UX Design Sprint',
-    date: 'Nov 10, 2026',
-    loc: '📍 Creative Studio',
-    cat: 'Workshop',
-    desc: 'A hands-on session on designing user interfaces by implementing layout systems and visual hierarchy principles.',
-  },
-  {
-    id: 5,
-    title: 'Digital Marketing Seminar',
-    date: 'Nov 20, 2026',
-    loc: '📍 Grand Hotel Hall',
-    cat: 'Seminar',
-    desc: 'An in-depth seminar dissecting modern digital marketing strategies, from SEO optimization to user conversion tactics.',
-  },
-  {
-    id: 6,
-    title: 'Community Leaders Summit',
-    date: 'Dec 05, 2026',
-    loc: '📍 Gatherly HQ',
-    cat: 'Conference',
-    desc: 'An exclusive year-end conference for community leaders to formulate sustainable ecosystem development strategies.',
-  },
-]
-
-const categories = ['All', 'Workshop', 'Meetup', 'Competition', 'Seminar', 'Conference']
+const { activeEvents } = useEvents()
 
 const searchQuery = ref('')
 const selectedCategory = ref('All')
@@ -66,7 +16,7 @@ const selectedCategory = ref('All')
 const filteredEvents = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
 
-  return events.filter((event) => {
+  return activeEvents.value.filter((event) => {
     const matchSearch =
       query === '' ||
       event.title.toLowerCase().includes(query) ||
@@ -77,10 +27,6 @@ const filteredEvents = computed(() => {
     return matchSearch && matchCat
   })
 })
-
-const handleViewDetail = (id) => {
-  router.push(`/browse/events/${id}`)
-}
 </script>
 
 <template>
@@ -93,22 +39,31 @@ const handleViewDetail = (id) => {
     </div>
 
     <SearchBar v-model="searchQuery" />
-    <CategoryFilter :categories="categories" v-model="selectedCategory" />
+    <CategoryFilter
+      :categories="['All', 'Workshop', 'Meetup', 'Competition', 'Seminar', 'Conference']"
+      v-model="selectedCategory"
+    />
 
     <!-- LAYOUT SYSTEM: ADAPTIVE GRID -->
-    <div class="event-grid" v-if="filteredEvents.length">
+    <div class="event-grid" v-if="filteredEvents.length > 0">
       <EventCard
         v-for="event in filteredEvents"
         :key="event.id"
         :event="event"
-        @view-detail="handleViewDetail"
+        @view-detail="$router.push('/browse/events/' + event.id)"
       />
     </div>
 
-    <!-- STATE-DRIVEN UI: EMPTY STATE -->
-    <div class="empty-state" v-else>
-      <p class="empty-title">No events found</p>
-      <p class="empty-desc">Try a different keyword or pick another category.</p>
+    <!-- STATE-DRIVEN UI: FRIENDLY EMPTY STATE -->
+    <div class="empty-state-card" v-else>
+      <div class="empty-illustration">📅</div>
+      <h3 class="empty-title">No Events Available Yet</h3>
+      <p class="empty-description">
+        Be the first to publish your own event from the organizer dashboard
+      </p>
+      <AppButton variant="primary" @click="$router.push('/dashboard/events')"
+        >Create Your First Event</AppButton
+      >
     </div>
   </div>
 </template>
@@ -133,12 +88,17 @@ const handleViewDetail = (id) => {
   gap: var(--space-6);
 }
 
-.empty-state {
+.empty-state-card {
   background: var(--bg-light);
   border: 1px dashed var(--border-color);
   border-radius: var(--space-4);
   padding: var(--space-12) var(--space-6);
   text-align: center;
+}
+
+.empty-illustration {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
 }
 
 .empty-title {
@@ -148,7 +108,8 @@ const handleViewDetail = (id) => {
   margin-bottom: var(--space-2);
 }
 
-.empty-desc {
+.empty-description {
   color: var(--text-muted);
+  margin-bottom: var(--space-6);
 }
 </style>
