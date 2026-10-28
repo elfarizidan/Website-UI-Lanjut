@@ -1,4 +1,4 @@
-<Script Setup>
+<script setup>
 import AppCard from '@/components/ui/AppCard.vue'
 defineProps({
   event: {
@@ -9,11 +9,11 @@ defineProps({
   },
 })
 defineEmits(['view-detail', 'complete', 'delete'])
-</Script>
+</script>
 
 <template>
   <transition name="fade">
-    <div :class="['organizer-event-card', { 'card-completed': isCompleted }]">
+    <AppCard :class="['organizer-event-card', { 'card-completed': isCompleted }]">
       <div class="card-header">
         <span class="category-badge">{{ event.cat }}</span>
         <span :class="['status-badge', isCompleted ? 'status-completed' : 'status-active']">
@@ -28,7 +28,7 @@ defineEmits(['view-detail', 'complete', 'delete'])
       <p class="event-meta">@{{ event.date }} &bull; {{ event.loc }}</p>
       <p class="event-desc">{{ event.desc }}</p>
 
-      <div v-if="!isCompleted" class="card-actions">
+      <div class="card-actions">
         <template v-if="!isCompleted">
           <button class="btn-action btn-detail" @click="$emit('view-detail', event.id)">
             View Details
@@ -49,7 +49,7 @@ defineEmits(['view-detail', 'complete', 'delete'])
       <div v-if="isCompleted" class="completed-notice">
         This event has ended and is archived from the public catalog.
       </div>
-    </div>
+    </AppCard>
   </transition>
 </template>
 
@@ -113,7 +113,7 @@ defineEmits(['view-detail', 'complete', 'delete'])
 }
 
 .completed-notice {
-  background: #f1f35;
+  background: #f1f5f9;
   color: #495057;
   padding: var(--space-3);
   border-radius: 6px;

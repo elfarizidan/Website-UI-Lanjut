@@ -28,12 +28,12 @@ defineProps({
 
     <div class="receipt-row">
       <span class="receipt-label">Event Schedule</span>
-      <span class="receipt-value">{{ confirmedData?.eventDate }}</span>
+      <span class="receipt-value">{{ confirmedData?.eventDate || event?.date }}</span>
     </div>
 
     <div class="receipt-row">
       <span class="receipt-label">Venue / Location</span>
-      <span class="receipt-value">{{ confirmedData?.eventLoc }}</span>
+      <span class="receipt-value">{{ confirmedData?.eventLoc || event?.loc }}</span>
     </div>
   </div>
 </template>

@@ -1,199 +1,255 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useEvents } from '@/composables/useEvents'
+import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import AppModal from '@/components/ui/AppModal.vue'
 
 const router = useRouter()
-const { userRegistrations, activeEvents, completeEvent, deleteEvent } = useEvents()
+const { userRegistrations, getEventById, cancelRegistration } = useEvents()
+const selectedRegistration = ref(null)
+const isCancelModalOpen = ref(false)
 
-const handleOpenCancelModal = (eventId) => {
-  isEventDone.value = false
-  openCancelModal.value = true
+const tickets = computed(() =>
+  userRegistrations.value
+    .map((registration) => ({
+      ...registration,
+      event: getEventById(registration.eventId),
+    }))
+    .filter((registration) => registration.event),
+)
+
+const handleConfirmCancel = () => {
+  if (selectedRegistration.value) cancelRegistration(selectedRegistration.value.eventId)
+  isCancelModalOpen.value = false
+  selectedRegistration.value = null
 }
 
-const isEventDone = (id) => {
-  return activeEvents.value.some((e) => (e.id === Number(id) ? e.done : false))
+const handleOpenCancel = (ticket) => {
+  selectedRegistration.value = ticket
+  isCancelModalOpen.value = true
 }
 
-const openCancelModal = ref(false)
-
-const handleCancelRegistration = (eventId) => {
-  userRegistrations.value = userRegistrations.value.filter((r) => r.eventId !== eventId)
-  deleteEvent(eventId)
-  isEventDone.value = false
-  openCancelModal.value = false
+const handleCloseCancel = () => {
+  isCancelModalOpen.value = false
+  selectedRegistration.value = null
 }
 </script>
 
 <template>
   <div class="your-events-page">
-    <div v-if="userRegistrations.length > 0" class="events-list">
-      <div v-for="reg in userRegistrations" :key="reg.id" class="event-card">
-        <div class="card-header">
-          <span class="category-badge">{{ reg.cat }}</span>
-          <span
-            :class="[
-              'status-badge',
-              isEventDone(reg.eventId) ? 'status-completed' : 'status-active',
-            ]"
+    <header class="page-header">
+      <h1>Your Events</h1>
+      <p>View your registrations and access your tickets.</p>
+    </header>
+
+    <div v-if="tickets.length" class="tickets-grid">
+      <AppCard v-for="ticket in tickets" :key="ticket.id" class="ticket-summary-card">
+        <div class="card-top">
+          <div class="top-left">
+            <span class="category-badge">{{ ticket.event.cat }}</span>
+            <span :class="['lifecycle-tag', ticket.event.done ? 'tag-concluded' : 'tag-upcoming']">
+              {{ ticket.event.done ? 'Concluded' : 'Upcoming' }}
+            </span>
+          </div>
+          <span class="booking-tag">#{{ ticket.bookingCode }}</span>
+        </div>
+
+        <h2 class="card-event-title">{{ ticket.event.title }}</h2>
+        <div class="card-meta">
+          <span class="meta-row"><strong>Date:</strong> {{ ticket.event.date }}</span>
+          <span class="meta-row"><strong>Location:</strong> {{ ticket.event.loc }}</span>
+          <span class="meta-row"><strong>Attendee:</strong> {{ ticket.fullName }}</span>
+        </div>
+
+        <div class="card-bottom">
+          <button
+            class="btn-view-ticket"
+            @click="router.push(`/browse/your-events/${ticket.eventId}`)"
           >
-            {{ isEventDone(reg.eventId) ? 'Completed' : 'Active' }}
-          </span>
+            View Ticket Details →
+          </button>
+          <button
+            v-if="!ticket.event.done"
+            class="btn-subtle-cancel"
+            @click="handleOpenCancel(ticket)"
+          >
+            Cancel
+          </button>
         </div>
-
-        <h3 class="event-title">{{ reg.title }}</h3>
-        <p class="event-meta">{{ reg.date }} &bull; {{ reg.loc }}</p>
-        <p class="event-desc">{{ reg.desc }}</p>
-
-        <div class="card-actions">
-          <template v-if="!isEventDone(reg.eventId)">
-            <button
-              class="btn-action btn-detail"
-              @click="router.push(`/your-events/${reg.eventId}`)"
-            >
-              View Ticket Details
-            </button>
-          </template>
-          <template v-else>
-            <button class="btn-action btn-delete" @click="handleCancelRegistration(reg.eventId)">
-              Cancel
-            </button>
-          </template>
-        </div>
-      </div>
+      </AppCard>
     </div>
 
     <div v-else class="empty-state">
       <div class="empty-illustration">🎫</div>
-      <h3 class="empty-title">No Events Registered Yet</h3>
-      <p class="empty-description">Browse active events and register to start collecting tickets</p>
-      <AppButton variant="primary" @click="router.push('/browse/events')">
-        Browse Events
-      </AppButton>
+      <h2>No Events Registered Yet</h2>
+      <p>Browse active events and register to start collecting tickets.</p>
+      <AppButton variant="primary" @click="router.push('/browse/events')">Browse Events</AppButton>
     </div>
-  </div>
 
-  <!-- Cancel Confirmation Modal -->
-  <AppModal
-    :is-open="openCancelModal"
-    title="Cancel Registration"
-    badge-text="Cancel Registration"
-    badge-variant="danger"
-    :show-cancel="true"
-    @close="openCancelModal.value = false"
-    @confirm="handleCancelRegistration(openCancelModal.value ? reg.eventId : null)"
-  >
-    <template #footer>
-      <AppButton variant="secondary" @click="openCancelModal.value = false">Keep Editing</AppButton>
-      <AppButton variant="danger" @click="openCancelModal.value = false">Yes, Discard</AppButton>
-    </template>
-  </AppModal>
+    <AppModal
+      :is-open="isCancelModalOpen"
+      title="Cancel Registration?"
+      :message="`Cancel your registration for ${selectedRegistration?.event?.title || 'this event'}? Your seat will be returned to the event quota.`"
+      confirm-text="Yes, Cancel Registration"
+      cancel-text="Keep Registration"
+      @confirm="handleConfirmCancel"
+      @close="handleCloseCancel"
+    />
+  </div>
 </template>
 
 <style scoped>
 .your-events-page {
-  padding: var(--space-8);
+  padding-bottom: var(--space-12);
 }
 
-.events-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
+.page-header {
+  margin-bottom: var(--space-8);
 }
 
-.event-card {
-  padding: var(--space-8);
-  border: 1px solid var(--border-color);
-  border-radius: var(--space-4);
-  background: white;
-  box-shadow: 0 4px 20px rgba(2, 0, 2, 0.03);
-  transition: transform 0.2s ease;
-}
-
-.event-card:hover {
-  transform: translateY(-4px);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-3);
-}
-
-.category-badge {
-  background: rgba(102, 68, 255, 0.1);
-  color: var(--primary);
-  padding: var(--space-1) var(--space-2);
-  border-radius: 5px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.event-title {
-  font-size: 1.3rem;
+.page-header h1 {
+  font-size: 2.2rem;
   color: var(--text-main);
   margin-bottom: var(--space-2);
 }
 
-.event-meta {
-  font-size: 0.9rem;
+.page-header p {
   color: var(--text-muted);
-  margin-bottom: var(--space-3);
+  font-size: 1.1rem;
 }
 
-.event-desc {
-  color: var(--text-muted);
-  font-size: 0.95rem;
-  line-height: 1.6;
-  margin-bottom: var(--space-6);
+.tickets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-6);
 }
 
-.card-actions {
+.ticket-summary-card {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.card-top,
+.top-left,
+.card-bottom {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-2);
 }
 
-.btn-action {
-  flex: 1;
-  padding: var(--space-2) var(--space-3);
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
+.card-top {
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.top-left {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.category-badge,
+.lifecycle-tag,
+.booking-tag {
+  padding: var(--space-1) var(--space-2);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.category-badge {
+  background: #ede9fe;
+  color: #642849;
+  text-transform: uppercase;
+}
+
+.lifecycle-tag {
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tag-upcoming {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.tag-concluded {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.booking-tag {
+  font-family: monospace;
   font-size: 0.85rem;
-  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-light);
+}
+
+.card-event-title {
+  font-size: 1.3rem;
+  color: var(--text-main);
+  margin-bottom: var(--space-3);
+}
+
+.card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  flex-grow: 1;
+}
+
+.meta-row {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.meta-row strong {
+  color: var(--text-main);
+}
+
+.card-bottom {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-color);
+}
+
+.btn-view-ticket,
+.btn-subtle-cancel {
+  background: none;
+  border: none;
   cursor: pointer;
-  background: white;
-  transition: all 0.2s;
-  white-space: nowrap;
 }
 
-.btn-action.btn-detail {
+.btn-view-ticket {
   color: var(--primary);
-  border-color: var(--primary);
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
-.btn-action.btn-detail:hover {
-  background: rgba(102, 68, 255, 0.05);
+.btn-view-ticket:hover {
+  text-decoration: underline;
 }
 
-.btn-action.btn-delete {
+.btn-subtle-cancel {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.btn-subtle-cancel:hover {
   color: #e63946;
-  border-color: rgba(230, 57, 70, 0.3);
-}
-
-.btn-action.btn-delete:hover {
-  background: #e63946;
-  color: white;
+  text-decoration: underline;
 }
 
 .empty-state {
   text-align: center;
   padding: var(--space-12) var(--space-8);
-  color: var(--text-muted);
+  background: var(--bg-light);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--space-4);
 }
 
 .empty-illustration {
@@ -201,14 +257,12 @@ const handleCancelRegistration = (eventId) => {
   margin-bottom: var(--space-4);
 }
 
-.empty-title {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: var(--text-main);
+.empty-state h2 {
   margin-bottom: var(--space-2);
 }
 
-.empty-description {
+.empty-state p {
+  color: var(--text-muted);
   margin-bottom: var(--space-6);
 }
 </style>

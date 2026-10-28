@@ -47,7 +47,7 @@ const isRegistered = computed(() => (event.value ? isUserRegistered(event.value.
                 <AppButton :disabled="true" variant="primary" class="btn-register">
                   Already Registered
                 </AppButton>
-                <router-link :to="`/your-events/${event.id}`" class="lir view">
+                <router-link :to="`/browse/your-events/${event.id}`" class="lir view">
                   View Ticket Receipt &rarr;
                 </router-link>
               </template>

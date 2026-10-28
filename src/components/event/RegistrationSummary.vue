@@ -11,7 +11,7 @@ defineEmits(['back'])
 <template>
   <div class="registration-summary-wrapper">
     <button class="btn-back" @click="$emit('back')">&larr; Back to Event Detail</button>
-    <div class="summary-card">
+    <AppCard class="summary-card">
       <span class="category-pill">{{ event.cat }}</span>
       <h3 class="event-name">{{ event.title }}</h3>
       <div class="summary-details">
@@ -29,7 +29,7 @@ defineEmits(['back'])
         </div>
       </div>
       <p class="summary-desc">{{ event.desc }}</p>
-    </div>
+    </AppCard>
   </div>
 </template>
 

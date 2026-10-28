@@ -8,7 +8,7 @@ import EventCard from '@/components/event/EventCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 
 const router = useRouter()
-const { activeEvents } = useEvents()
+const { activeEvents, isUserRegistered } = useEvents()
 
 const searchQuery = ref('')
 const selectedCategory = ref('All')

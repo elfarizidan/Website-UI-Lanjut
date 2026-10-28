@@ -20,6 +20,14 @@ defineProps({
     type: String,
     default: 'Cancel',
   },
+  badgeText: {
+    type: String,
+    default: '',
+  },
+  showCancel: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 defineEmits(['confirm', 'close'])
@@ -31,19 +39,24 @@ defineEmits(['confirm', 'close'])
       <div class="modal-card">
         <div class="modal-header">
           <div class="modal-icon">⚠</div>
-          <h3 class="modal-title">{{ title }}</h3>
+          <div>
+            <span v-if="badgeText" class="modal-badge">{{ badgeText }}</span>
+            <h3 class="modal-title">{{ title }}</h3>
+          </div>
         </div>
         <div class="modal-body">
-          <p class="modal-message">{{ message }}</p>
+          <p v-if="message" class="modal-message">{{ message }}</p>
           <slot />
         </div>
         <div class="modal-footer">
-          <button class="btn-cancel" @click="$emit('close')">
-            {{ cancelText }}
-          </button>
-          <button class="btn-confirm" @click="$emit('confirm')">
-            {{ confirmText }}
-          </button>
+          <slot name="footer">
+            <button v-if="showCancel" class="btn-cancel" @click="$emit('close')">
+              {{ cancelText }}
+            </button>
+            <button class="btn-confirm" @click="$emit('confirm')">
+              {{ confirmText }}
+            </button>
+          </slot>
         </div>
       </div>
     </div>
@@ -106,6 +119,16 @@ defineEmits(['confirm', 'close'])
   font-weight: 700;
   color: var(--text-main);
   margin: 0;
+}
+
+.modal-badge {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .modal-body {

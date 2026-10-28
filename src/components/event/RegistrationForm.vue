@@ -1,90 +1,66 @@
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { reactive, ref } from 'vue'
 import { useEvents } from '@/composables/useEvents'
-import AppCard from '@/components/ui/AppCard.vue'
 import AppModal from '@/components/ui/AppModal.vue'
 
-defineProps({
+const props = defineProps({
   event: {
     required: true,
   },
 })
-const emit = defineEmits(['success', 'cancel'])
+const emit = defineEmits(['success', 'cancel', 'error'])
+const { registerAttendee } = useEvents()
 
-const form = reactive({
-  fullName: '',
-  email: '',
-  phone: '',
-  dob: '',
-  reason: '',
-})
-
-const errors = reactive({
-  fullName: '',
-  email: '',
-  phone: '',
-  dob: '',
-  reason: '',
-})
+const form = reactive({ fullName: '', email: '', phone: '', dob: '', reason: '' })
+const errors = reactive({ fullName: '', email: '', phone: '', dob: '', reason: '' })
+const errorMessage = ref('')
+const isDiscardModalOpen = ref(false)
 
 const validateField = (field) => {
   if (field === 'fullName') {
-    if (!form.fullName.trim()) {
-      errors.fullName = 'Full name is required.'
-    } else if (form.fullName.trim().length < 2) {
-      errors.fullName = 'Full name must be at least 2 characters.'
-    } else {
-      errors.fullName = ''
-    }
+    errors.fullName = !form.fullName.trim()
+      ? 'Full name is required.'
+      : form.fullName.trim().length < 2
+        ? 'Full name must be at least 2 characters.'
+        : ''
   } else if (field === 'email') {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!form.email.trim()) {
-      errors.email = 'Email address is required.'
-    } else if (!emailRegex.test(form.email.trim())) {
-      errors.email = 'Please enter a valid email address (e.g. name@example.com).'
-    } else {
-      errors.email = ''
-    }
+    errors.email = !form.email.trim()
+      ? 'Email address is required.'
+      : !emailRegex.test(form.email.trim())
+        ? 'Please enter a valid email address.'
+        : ''
   } else if (field === 'phone') {
-    const phoneRegex = /^[0-9\s\-\(\)]{9,16}$/
-    if (!form.phone.trim()) {
-      errors.phone = 'Phone number is required.'
-    } else if (!phoneRegex.test(form.phone.trim())) {
-      errors.phone = 'Please enter a valid phone number (minimum 9 digits).'
-    } else {
-      errors.phone = ''
-    }
+    const phoneRegex = /^[0-9\s\-()+]{9,18}$/
+    errors.phone = !form.phone.trim()
+      ? 'Phone number is required.'
+      : !phoneRegex.test(form.phone.trim())
+        ? 'Please enter a valid phone number.'
+        : ''
   } else if (field === 'dob') {
-    if (!form.dob) {
-      errors.dob = 'Date of birth is required.'
-    } else if (new Date(form.dob) > new Date()) {
-      errors.dob = 'Date of birth cannot be in the future.'
-    } else {
-      errors.dob = ''
-    }
+    errors.dob = !form.dob
+      ? 'Date of birth is required.'
+      : new Date(form.dob) > new Date()
+        ? 'Date of birth cannot be in the future.'
+        : ''
   } else if (field === 'reason') {
-    if (!form.reason.trim()) {
-      errors.reason = 'Reason for attending is required.'
-    } else if (form.reason.trim().length < 10) {
-      errors.reason = 'Please write at least 10 characters explaining your reason.'
-    } else {
-      errors.reason = ''
-    }
+    errors.reason = !form.reason.trim()
+      ? 'Reason for attending is required.'
+      : form.reason.trim().length < 10
+        ? 'Please write at least 10 characters.'
+        : ''
   }
 }
 
 const validateAll = () => {
-  validateField('fullName')
-  validateField('email')
-  validateField('phone')
-  validateField('dob')
-  validateField('reason')
-  return !(errors.fullName || errors.email || errors.phone || errors.dob || errors.reason)
+  Object.keys(errors).forEach(validateField)
+  return Object.values(errors).every((error) => !error)
 }
 
 const handleSubmit = () => {
+  errorMessage.value = ''
   if (!validateAll()) {
-    emit('error', 'Please correct the highlighted fields before submitting.')
+    errorMessage.value = 'Please correct the highlighted fields before submitting.'
     return
   }
 
@@ -96,21 +72,19 @@ const handleSubmit = () => {
     reason: form.reason.trim(),
   })
 
-  if (record) {
-    emit('success', record)
-  } else {
-    emit('error', 'Unable to complete registration. Please check remaining seats.')
-  }
+  if (record) emit('success', record)
+  else errorMessage.value = 'Unable to complete registration. Please check remaining seats.'
 }
 
 const handleCancelClick = () => {
-  const isFormDirty =
-    form.fullName.trim() || form.email.trim() || form.phone.trim() || form.dob || form.reason.trim()
-  if (isFormDirty) {
-    isDiscardModalOpen.value = true
-  } else {
-    emit('cancel')
-  }
+  const isFormDirty = Object.values(form).some((value) => String(value).trim())
+  if (isFormDirty) isDiscardModalOpen.value = true
+  else emit('cancel')
+}
+
+const handleDiscard = () => {
+  isDiscardModalOpen.value = false
+  emit('cancel')
 }
 </script>
 
@@ -122,11 +96,9 @@ const handleCancelClick = () => {
         <p>Fill out the attendee information below to confirm your participation.</p>
       </header>
 
-      <div class="error-banner" v-if="errorMessage">
-        <span class="field-error">{{ errorMessage }}</span>
-      </div>
+      <div v-if="errorMessage" class="alert-box alert-error">{{ errorMessage }}</div>
 
-      <form @submit.prevent="handleSubmit" class="attendee-form">
+      <form class="attendee-form" @submit.prevent="handleSubmit">
         <div class="form-group">
           <label for="fullName">Full Name <span class="required">*</span></label>
           <input
@@ -135,9 +107,9 @@ const handleCancelClick = () => {
             type="text"
             placeholder="e.g. John Doe"
             autocomplete="name"
-            @input="fullName && validateField('fullName')"
+            @blur="validateField('fullName')"
           />
-          <span v-if="fullName" class="field-error">{{ fullName }}</span>
+          <span v-if="errors.fullName" class="field-error">{{ errors.fullName }}</span>
         </div>
 
         <div class="form-group">
@@ -148,9 +120,9 @@ const handleCancelClick = () => {
             type="email"
             placeholder="e.g. name@example.com"
             autocomplete="email"
-            @input="email && validateField('email')"
+            @blur="validateField('email')"
           />
-          <span v-if="email" class="field-error">{{ email }}</span>
+          <span v-if="errors.email" class="field-error">{{ errors.email }}</span>
         </div>
 
         <div class="form-group">
@@ -161,21 +133,26 @@ const handleCancelClick = () => {
             type="tel"
             placeholder="e.g. 81234567890"
             autocomplete="tel"
-            @input="phone && validateField('phone')"
+            @blur="validateField('phone')"
           />
-          <span v-if="phone" class="field-error">{{ phone }}</span>
+          <span v-if="errors.phone" class="field-error">{{ errors.phone }}</span>
         </div>
 
         <div class="form-group">
           <label for="dob">Date of Birth <span class="required">*</span></label>
-          <input id="dob" v-model="form.dob" type="date" @change="dob && validateField('dob')" />
-          <span v-if="dob" class="field-error">{{ dob }}</span>
+          <input id="dob" v-model="form.dob" type="date" @blur="validateField('dob')" />
+          <span v-if="errors.dob" class="field-error">{{ errors.dob }}</span>
         </div>
 
         <div class="form-group">
           <label for="reason">Reason for Attending <span class="required">*</span></label>
-          <textarea v-model="form.reason" @input="reason && validateField('reason')"></textarea>
-          <span v-if="reason" class="field-error">{{ reason }}</span>
+          <textarea
+            id="reason"
+            v-model="form.reason"
+            rows="4"
+            @blur="validateField('reason')"
+          ></textarea>
+          <span v-if="errors.reason" class="field-error">{{ errors.reason }}</span>
         </div>
 
         <div class="form-actions">
@@ -184,6 +161,16 @@ const handleCancelClick = () => {
         </div>
       </form>
     </div>
+
+    <AppModal
+      :is-open="isDiscardModalOpen"
+      title="Discard Registration?"
+      message="Your registration details will be lost."
+      confirm-text="Discard"
+      cancel-text="Continue Editing"
+      @confirm="handleDiscard"
+      @close="isDiscardModalOpen = false"
+    />
   </div>
 </template>
 
@@ -194,16 +181,15 @@ const handleCancelClick = () => {
   background: white;
   border-radius: var(--space-4);
   box-shadow: 0 4px 20px rgba(2, 0, 2, 0.03);
-  margin-bottom: var(--space-6);
 }
 
-.form-header {
+.form-header h2 {
   font-size: 1.6rem;
   color: var(--text-main);
   margin-bottom: var(--space-1);
 }
 
-.form-subtitle {
+.form-header p {
   color: var(--text-muted);
   font-size: 0.95rem;
   margin-bottom: var(--space-6);
@@ -212,8 +198,6 @@ const handleCancelClick = () => {
 .alert-box {
   padding: var(--space-3) var(--space-4);
   border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
   margin-bottom: var(--space-6);
 }
 
@@ -223,112 +207,79 @@ const handleCancelClick = () => {
   border: 1px solid #ffa8a8;
 }
 
-.alert-success {
-  background: #d39d8c;
-  color: #2b8a3e;
-  border: 1px solid #b2f2bb;
-}
-
+.attendee-form,
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: var(--space-4);
+}
+
+.attendee-form {
+  gap: var(--space-4);
+}
+
+.form-group {
+  gap: var(--space-2);
 }
 
 .form-group label {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-main);
-  margin-bottom: 8px;
 }
 
-.form-input {
+.required,
+.field-error {
+  color: #c92a2a;
+}
+
+.form-group input,
+.form-group textarea {
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  outline: none;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.25s,
-    background-color 0.25s;
   box-sizing: border-box;
-  font-size: 0.95rem;
-  color: var(--text-main);
-  background: #fafafa;
-}
-
-.form-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 3px rgba(102, 68, 255, 0.15);
-}
-
-.form-textarea {
-  width: 100%;
-  padding: 12px 14px;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  outline: none;
-  resize: vertical;
-  line-height: 1.55;
-  font-family: inherit;
-  font-size: 0.95rem;
+  font: inherit;
   color: var(--text-main);
-  background: #fafafa;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.25s;
+  background: white;
 }
 
-.form-textarea:focus {
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 3px rgba(102, 68, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(102, 68, 255, 0.15);
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-4);
-  margin-top: 10px;
   padding-top: var(--space-4);
   border-top: 1px solid var(--border-color);
+}
+
+.btn-cancel-form,
+.btn-submit-form {
+  padding: var(--space-3) var(--space-6);
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .btn-cancel-form {
   background: var(--bg-light);
   color: var(--text-muted);
   border: 1px solid var(--border-color);
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-
-.btn-cancel-form:hover {
-  background: #e2e8f0;
-  color: var(--text-main);
 }
 
 .btn-submit-form {
   background: var(--primary);
   color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition:
-    background 0.2s,
-    transform 0.1s;
-  padding: 10px 24px;
+  border: 0;
 }
 
 .btn-submit-form:hover {
-  background: #5032d6;
-}
-
-.btn-submit-form:active {
-  transform: scale(0.98);
+  background: var(--primary-hover);
 }
 </style>

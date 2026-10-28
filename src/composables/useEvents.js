@@ -2,14 +2,43 @@ import { ref, computed, watch } from 'vue'
 
 const STORAGE_KEY = 'gatherly_events'
 const savedData = localStorage.getItem(STORAGE_KEY)
-const events = ref(savedData ? JSON.parse(savedData) : [])
 
-const userRegistrations = ref(savedData ? JSON.parse(savedData).registrations : [])
+// Handle both old format (plain array) and new format (object with events + registrations)
+let parsedData
+try {
+  parsedData = savedData ? JSON.parse(savedData) : []
+} catch (e) {
+  parsedData = []
+}
+
+// If old format (array), convert to new format (object)
+let eventsArray
+let registrationsArray
+
+if (Array.isArray(parsedData)) {
+  // Old Modul 4 format: just an array of events
+  eventsArray = parsedData
+  registrationsArray = []
+} else if (parsedData && parsedData.events) {
+  // New format: { events, registrations }
+  eventsArray = parsedData.events
+  registrationsArray = parsedData.registrations || []
+} else {
+  // Fallback to empty
+  eventsArray = []
+  registrationsArray = []
+}
+
+const events = ref(eventsArray)
+const userRegistrations = ref(registrationsArray)
 
 watch(
   events,
   (newEvents) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newEvents))
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ events: newEvents, registrations: userRegistrations.value }),
+    )
   },
   { deep: true },
 )
@@ -17,7 +46,10 @@ watch(
 watch(
   userRegistrations,
   (newRegs) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: newEvents, registrations: newRegs }))
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ events: events.value, registrations: newRegs }),
+    )
   },
   { deep: true },
 )
@@ -26,6 +58,7 @@ export function useEvents() {
   const totalEvents = computed(() => events.value.length)
   const activeEvents = computed(() => events.value.filter((e) => !e.done))
   const completedEvents = computed(() => events.value.filter((e) => e.done))
+  const userRegistrationsCount = computed(() => userRegistrations.value.length)
 
   const createEvent = (eventData) => {
     events.value.unshift({
@@ -78,6 +111,21 @@ export function useEvents() {
     return userRegistrations.value.some((r) => r.eventId === Number(eventId))
   }
 
+  const cancelRegistration = (eventId) => {
+    const id = Number(eventId)
+    const registrationIndex = userRegistrations.value.findIndex((r) => r.eventId === id)
+    if (registrationIndex === -1) return false
+
+    const event = events.value.find((item) => item.id === id)
+    if (event) event.quota = Number(event.quota || 0) + 1
+    userRegistrations.value.splice(registrationIndex, 1)
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ events: events.value, registrations: userRegistrations.value }),
+    )
+    return true
+  }
+
   const deleteEvent = (id) => {
     const idx = events.value.findIndex((e) => e.id === Number(id))
     if (idx !== -1) {
@@ -102,10 +150,13 @@ export function useEvents() {
     activeEvents,
     completedEvents,
     userRegistrations,
+    userRegistrationsCount,
     createEvent,
     registerAttendee,
     getEventById,
     getRegistrationByEventId,
+    isUserRegistered,
+    cancelRegistration,
     deleteEvent,
     clearAllEvents,
   }
