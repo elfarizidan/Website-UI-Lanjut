@@ -28,7 +28,7 @@ const routes = [
         children: [
           {
             path: 'events',
-            name: 'event-list',
+            name: 'events',
             component: () => import('@/views/EventList.vue'),
             meta: { breadcrumb: 'Event List' },
           },
@@ -43,6 +43,24 @@ const routes = [
             name: 'category',
             component: () => import('@/views/Category.vue'),
             meta: { breadcrumb: 'Category' },
+          },
+          {
+            path: 'events/:id/register',
+            name: 'event-registration',
+            component: () => import('@/views/EventRegistration.vue'),
+            meta: { breadcrumb: 'Register Event' },
+          },
+          {
+            path: 'your-events',
+            name: 'your-events',
+            component: () => import('@/views/YourEvents.vue'),
+            meta: { breadcrumb: 'Your Events' },
+          },
+          {
+            path: 'your-events/:id',
+            name: 'ticket-receipt',
+            component: () => import('@/views/TicketReceipt.vue'),
+            meta: { breadcrumb: 'Ticket Receipt' },
           },
         ],
       },
@@ -61,11 +79,6 @@ const routes = [
       {
         path: '',
         name: 'dashboard',
-        component: () => import('@/views/Dashboard.vue'),
-      },
-      {
-        path: 'events',
-        name: 'dashboard-events',
         component: () => import('@/views/EventManagement.vue'),
       },
     ],

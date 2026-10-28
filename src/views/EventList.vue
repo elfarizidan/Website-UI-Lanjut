@@ -50,6 +50,7 @@ const filteredEvents = computed(() => {
         v-for="event in filteredEvents"
         :key="event.id"
         :event="event"
+        :is-registered="isUserRegistered(event.id)"
         @view-detail="$router.push('/browse/events/' + event.id)"
       />
     </div>

@@ -7,9 +7,10 @@ import AppCard from '@/components/ui/AppCard.vue'
 
 const route = useRoute()
 const router = useRouter()
-const { getEventById } = useEvents()
+const { getEventById, isUserRegistered } = useEvents()
 
 const event = computed(() => getEventById(route.params.id))
+const isRegistered = computed(() => (event.value ? isUserRegistered(event.value.id) : false))
 </script>
 
 <template>
@@ -34,9 +35,38 @@ const event = computed(() => getEventById(route.params.id))
           <AppCard class="ticket-card sticky-pane">
             <h3>Attendee Registration</h3>
             <p class="ticket-desc">Secure your seat now before the quota is full.</p>
-            <AppButton :disabled="event.done" variant="primary" class="btn-register">
-              {{ event.done ? 'Registration Closed' : `Register Now (${event.price})` }}
-            </AppButton>
+
+            <div class="button-group">
+              <template v-if="event.done">
+                <AppButton :disabled="true" variant="primary" class="btn-register">
+                  Registration Closed
+                </AppButton>
+              </template>
+
+              <template v-if="isRegistered">
+                <AppButton :disabled="true" variant="primary" class="btn-register">
+                  Already Registered
+                </AppButton>
+                <router-link :to="`/your-events/${event.id}`" class="lir view">
+                  View Ticket Receipt &rarr;
+                </router-link>
+              </template>
+
+              <template v-if="event.quota <= 0">
+                <AppButton :disabled="true" variant="primary" class="btn-disabled">
+                  Sold Out
+                </AppButton>
+              </template>
+
+              <template v-if="!event.done && !isRegistered && event.quota > 0">
+                <AppButton
+                  variant="primary"
+                  @click="router.push(`/browse/events/${event.id}/register`)"
+                >
+                  Register Now {{ event.quota }} seats available
+                </AppButton>
+              </template>
+            </div>
           </AppCard>
         </div>
       </div>

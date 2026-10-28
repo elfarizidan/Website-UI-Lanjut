@@ -6,6 +6,9 @@ defineProps({
     type: Object,
     required: true,
   },
+  isRegistered: {
+    default: false,
+  },
 })
 
 defineEmits(['view-detail'])
@@ -16,7 +19,11 @@ defineEmits(['view-detail'])
     <div class="event-body">
       <div class="event-meta">
         <span class="event-date">{{ event.date }}</span>
-        <span class="event-category">{{ event.cat }}</span>
+
+        <div class="meta-left">
+          <span class="event-category">{{ event.cat }}</span>
+          <span v-if="isRegistered" class="badge-registered">Registered</span>
+        </div>
       </div>
 
       <h3 class="event-title">{{ event.title }}</h3>
@@ -51,6 +58,13 @@ defineEmits(['view-detail'])
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-4);
+}
+
+.meta-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .event-date {
@@ -106,5 +120,16 @@ defineEmits(['view-detail'])
 
 .btn-link:hover {
   color: var(--primary);
+}
+
+.badge-registered {
+  background: rgba(102, 68, 255, 0.1);
+  color: var(--primary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 </style>
