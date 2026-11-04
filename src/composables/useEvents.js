@@ -27,7 +27,7 @@ watch(
   (newEvents) => {
     localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(newEvents))
   },
-  { deep: true }
+  { deep: true },
 )
 
 watch(
@@ -35,7 +35,7 @@ watch(
   (newRegs) => {
     localStorage.setItem(REGISTRATIONS_STORAGE_KEY, JSON.stringify(newRegs))
   },
-  { deep: true }
+  { deep: true },
 )
 
 export function useEvents() {
@@ -52,16 +52,19 @@ export function useEvents() {
     const baseUrl = getApiBaseUrl()
 
     // Validasi apakah endpoint MockAPI sudah dikonfigurasi di file .env
-    if (!baseUrl || baseUrl.includes('67xxxxxx')) {
+    if (!baseUrl || baseUrl.includes('https://6aeac3a23d3dd3d37be72719.mockapi.io/api/v1/:endpoint')) {
       loading.value = false
-      error.value = 'Alamat REST API belum dikonfigurasi. Silakan masukkan URL MockAPI Anda pada berkas .env (contoh: https://67xxxx.mockapi.io/api/v1).'
+      error.value =
+        'Alamat REST API belum dikonfigurasi. Silakan masukkan URL MockAPI Anda pada berkas .env (contoh: https://67xxxx.mockapi.io/api/v1).'
       return
     }
 
     try {
       const response = await fetch(`${baseUrl}/events`)
       if (!response.ok) {
-        throw new Error(`Gagal memuat data dari server (Status HTTP: ${response.status}) ${response.statusText || ''}`)
+        throw new Error(
+          `Gagal memuat data dari server (Status HTTP: ${response.status}) ${response.statusText || ''}`,
+        )
       }
       const data = await response.json()
       events.value = Array.isArray(data) ? data : []
@@ -126,7 +129,7 @@ export function useEvents() {
       quota: Number(eventData.quota) || 100,
       price: eventData.price || 'Free',
       desc: eventData.desc.trim(),
-      done: false
+      done: false,
     }
 
     const baseUrl = getApiBaseUrl()
@@ -136,9 +139,9 @@ export function useEvents() {
         const response = await fetch(`${baseUrl}/events`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
         })
 
         if (!response.ok) {
@@ -173,7 +176,7 @@ export function useEvents() {
     try {
       if (baseUrl && !baseUrl.includes('67xxxxxx')) {
         const response = await fetch(`${baseUrl}/events/${strId}`, {
-          method: 'DELETE'
+          method: 'DELETE',
         })
 
         if (!response.ok && response.status !== 404) {
@@ -206,7 +209,7 @@ export function useEvents() {
           await fetch(`${baseUrl}/events/${strId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ done: true })
+            body: JSON.stringify({ done: true }),
           })
         } catch (err) {
           console.warn('Gagal memperbarui status selesai di server:', err)
@@ -241,7 +244,7 @@ export function useEvents() {
       email: participantData.email.trim(),
       phone: participantData.phone.trim(),
       dob: participantData.dob,
-      reason: participantData.reason.trim()
+      reason: participantData.reason.trim(),
     }
 
     // Kurangi kuota event secara reaktif
@@ -310,6 +313,6 @@ export function useEvents() {
     getRegistrationByEventId,
     cancelRegistration,
     clearAllEvents,
-    clearAllRegistrations
+    clearAllRegistrations,
   }
 }

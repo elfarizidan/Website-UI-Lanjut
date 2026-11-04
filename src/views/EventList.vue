@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useEvents } from '@/composables/useEvents'
+import { useRouter } from 'vue-router'
 import SearchBar from '@/components/event/SearchBar.vue'
 import CategoryFilter from '@/components/event/CategoryFilter.vue'
 import EventCard from '@/components/event/EventCard.vue'
@@ -28,6 +29,10 @@ const filteredEvents = computed(() => {
     return matchSearch && matchCat
   })
 })
+
+const handleViewDetail = (id) => {
+  router.push(`/browse/events/${id}`)
+}
 
 onMounted(() => {
   fetchEvents()
@@ -62,7 +67,7 @@ onMounted(() => {
           :key="event.id"
           :event="event"
           :is-registered="isUserRegistered(event.id)"
-          @view-detail="$router.push('/browse/events/' + event.id)'
+          @view-detail="handleViewDetail(event.id)"
         />
       </div>
 
@@ -79,12 +84,7 @@ onMounted(() => {
     </template>
 
     <!-- ERROR BANNER -->
-    <ErrorBanner
-      v-if="error"
-      :is-open="true"
-      :errorMessage="error"
-      @retry="fetchEvents"
-    />
+    <ErrorBanner v-if="error" :is-open="true" :errorMessage="error" @retry="fetchEvents" />
   </div>
 </template>
 

@@ -54,7 +54,8 @@ const validateField = (field) => {
       errors.loc = !form.loc.trim() ? 'Event location is required.' : ''
       break
     case 'quota':
-      errors.quota = !form.quota || Number(form.quota) < 1 ? 'Quota must be at least 1 attendee.' : ''
+      errors.quota =
+        !form.quota || Number(form.quota) < 1 ? 'Quota must be at least 1 attendee.' : ''
       break
     case 'desc':
       errors.desc = !form.desc.trim() ? 'Event description is required.' : ''
