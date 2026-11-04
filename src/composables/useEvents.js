@@ -52,7 +52,7 @@ export function useEvents() {
     const baseUrl = getApiBaseUrl()
 
     // Validasi apakah endpoint MockAPI sudah dikonfigurasi di file .env
-    if (!baseUrl || baseUrl.includes('https://6aeac3a23d3dd3d37be72719.mockapi.io/api/v1/:endpoint')) {
+    if (!baseUrl || baseUrl.includes('67xxxxxx')) {
       loading.value = false
       error.value =
         'Alamat REST API belum dikonfigurasi. Silakan masukkan URL MockAPI Anda pada berkas .env (contoh: https://67xxxx.mockapi.io/api/v1).'
