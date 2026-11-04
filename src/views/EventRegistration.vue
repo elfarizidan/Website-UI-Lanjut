@@ -19,6 +19,9 @@ const isRegistered = computed(() =>
 const isSuccessModalOpen = ref(false)
 const confirmedData = ref(null)
 
+// Tambah state loading untuk registration
+const isRegisterLoading = ref(false)
+
 const handleRegistrationSuccess = (record) => {
   confirmedData.value = record
   isSuccessModalOpen.value = true
@@ -36,6 +39,44 @@ const handleGoToCatalog = () => {
 const handleGoToYourEvents = () => {
   isSuccessModalOpen.value = false
   router.push('/browse/your-events')
+}
+
+// Fungsi registrasi yang terintegrasi dengan API
+const handleRegister = async (participantData) => {
+  isRegisterLoading.value = true
+
+  try {
+    const result = await useEvents().registerAttendee(event.value.id, participantData)
+
+    if (result && result.event) {
+      // Registration in progress - update UI locally
+      // Will be updated again when API resolves
+    }
+
+    // Tunggu sebentar lalu cek status
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
+    // Cek ulang registrasi
+    const isRegNow = event.value
+      ? Boolean(getRegistrationByEventId(event.value.id))
+      : false
+
+    if (isRegNow) {
+      // Sukses - tampilkan modal konfirmasi
+      const regRecord = getRegistrationByEventId(event.value.id)
+      if (regRecord) {
+        handleRegistrationSuccess(regRecord)
+      }
+    } else {
+      // Gagal - tampilkan error
+      alert('Registrasi gagal. Silakan coba lagi.')
+    }
+  } catch (err) {
+    console.error('Registration error:', err)
+    alert('Terjadi kesalahan saat registrasi. Silakan coba lagi.')
+  } finally {
+    isRegisterLoading.value = false
+  }
 }
 </script>
 
@@ -56,6 +97,7 @@ const handleGoToYourEvents = () => {
         :event="event"
         @success="handleRegistrationSuccess"
         @cancel="handleBackToDetail"
+        @register="handleRegister"
       />
       <div v-else class="registration-notice">
         <h2>{{ isRegistered ? 'You are registered' : 'Registration unavailable' }}</h2>
@@ -110,29 +152,6 @@ const handleGoToYourEvents = () => {
   border-bottom: 1px solid var(--border-color);
 }
 
-.status-badge {
-  display: inline-block;
-  padding: var(--space-1) var(--space-3);
-  border-radius: 50px;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.status-badge.concluded {
-  background: rgba(102, 112, 133, 0.1);
-  color: var(--text-muted);
-}
-
-.status-badge.registered {
-  background: rgba(102, 68, 255, 0.1);
-  color: var(--primary);
-}
-
-.status-badge.open {
-  background: rgba(46, 204, 113, 0.1);
-  color: #2ecc71;
-}
-
 .two-column-layout {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -156,28 +175,9 @@ const handleGoToYourEvents = () => {
   margin-bottom: var(--space-6);
 }
 
-.not-found-card {
-  padding: var(--space-12) var(--space-6);
-  text-align: center;
-}
-
-.not-found-icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-4);
-}
-
-.not-found-card h2 {
-  margin-bottom: var(--space-2);
-}
-
-.not-found-card p {
-  color: var(--text-muted);
-  margin-bottom: var(--space-6);
-}
-
-@media (max-width: 768px) {
-  .two-column-layout {
-    grid-template-columns: 1fr;
-  }
+/* Loading state untuk form register */
+.form-register-loading .btn-primary {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 </style>

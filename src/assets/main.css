@@ -42,3 +42,76 @@ body {
   grid-template-columns: repeat(12, 1fr);
   gap: var(--space-6);
 }
+
+/* MODUL 6: UI INTEGRASI SISTEM */
+
+.loading-spinner {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.loading-spinner .spinner-ball {
+  width: var(--space-4);
+  height: var(--space-4);
+  background: var(--primary);
+  border-radius: 50%;
+  animation: spinner-bounce 1.2s ease-in-out infinite;
+}
+
+@keyframes spinner-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.error-banner {
+  position: fixed;
+  bottom: var(--space-8);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffe3e3;
+  border: 1px solid #ffa8a8;
+  border-radius: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.15);
+}
+
+.error-banner-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.error-icon {
+  font-size: 1.5rem;
+  color: #c92a2a;
+}
+
+.error-message {
+  color: #c92a2a;
+  font-size: 0.95rem;
+  flex: 1;
+}
+
+.btn-retry {
+  background: transparent;
+  border: none;
+  color: #c92a2a;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+
+.btn-retry:hover {
+  color: #a91818;
+}

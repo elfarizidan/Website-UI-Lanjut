@@ -1,14 +1,16 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useEvents } from '@/composables/useEvents'
 import SearchBar from '@/components/event/SearchBar.vue'
 import CategoryFilter from '@/components/event/CategoryFilter.vue'
 import EventCard from '@/components/event/EventCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner.vue'
+import { ErrorBanner } from '@/components/ui/ErrorBanner.vue'
 
 const router = useRouter()
-const { activeEvents, isUserRegistered } = useEvents()
+const { activeEvents, isUserRegistered, isEventsLoading, eventsError } = useEvents()
 
 const searchQuery = ref('')
 const selectedCategory = ref('All')
@@ -22,10 +24,15 @@ const filteredEvents = computed(() => {
       event.title.toLowerCase().includes(query) ||
       event.loc.toLowerCase().includes(query) ||
       event.desc.toLowerCase().includes(query)
-    const matchCat = selectedCategory.value === 'All' || event.cat === selectedCategory.value
+    const matchCat =
+      selectedCategory.value === 'All' || event.cat === selectedCategory.value
 
     return matchSearch && matchCat
   })
+})
+
+onMounted(() => {
+  // Events already loaded from useEvents init
 })
 </script>
 
@@ -45,72 +52,56 @@ const filteredEvents = computed(() => {
     />
 
     <!-- LAYOUT SYSTEM: ADAPTIVE GRID -->
-    <div class="event-grid" v-if="filteredEvents.length > 0">
-      <EventCard
-        v-for="event in filteredEvents"
-        :key="event.id"
-        :event="event"
-        :is-registered="isUserRegistered(event.id)"
-        @view-detail="$router.push('/browse/events/' + event.id)"
-      />
+    <div v-if="isEventsLoading" class="loading-state">
+      <LoadingSpinner />
+      <p class="loading-text">Memuat acara...</p>
     </div>
 
-    <!-- STATE-DRIVEN UI: FRIENDLY EMPTY STATE -->
-    <div class="empty-state-card" v-else>
-      <div class="empty-illustration">📅</div>
-      <h3 class="empty-title">No Events Available Yet</h3>
-      <p class="empty-description">
-        Be the first to publish your own event from the organizer dashboard
-      </p>
-      <AppButton variant="primary" @click="$router.push('/dashboard/events')"
-        >Create Your First Event</AppButton
-      >
-    </div>
+    <template v-else>
+      <div v-if="filteredEvents.length > 0" class="event-grid">
+        <EventCard
+          v-for="event in filteredEvents"
+          :key="event.id"
+          :event="event"
+          :is-registered="isUserRegistered(event.id)"
+          @view-detail="$router.push('/browse/events/' + event.id)"
+        />
+      </div>
+
+      <div v-else class="empty-state-card">
+        <div class="empty-illustration">📅</div>
+        <h3 class="empty-title">No Events Available Yet</h3>
+        <p class="empty-description">
+          Be the first to publish your own event from the organizer dashboard
+        </p>
+        <AppButton variant="primary" @click="$router.push('/dashboard/events')"
+          >Create Your First Event</AppButton
+        >
+      </div>
+    </template>
+
+    <!-- ERROR BANNER -->
+    <ErrorBanner
+      v-if="eventsError"
+      :is-open="true"
+      :errorMessage="eventsError"
+      @retry="loadEventsFromApi"
+    />
   </div>
 </template>
 
 <style scoped>
-.header-section {
-  margin-bottom: var(--space-8);
-}
-.section-title {
-  font-size: 2.2rem;
-  margin-bottom: var(--space-2);
-}
-.section-desc {
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
   color: var(--text-muted);
-  font-size: 1.1rem;
 }
 
-/* ADAPTIVE GRID */
-.event-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--space-6);
-}
-
-.empty-state-card {
-  background: var(--bg-light);
-  border: 1px dashed var(--border-color);
-  border-radius: var(--space-4);
-  padding: var(--space-12) var(--space-6);
-  text-align: center;
-}
-
-.empty-illustration {
-  font-size: 3rem;
-  margin-bottom: var(--space-4);
-}
-
-.empty-title {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: var(--text-main);
-  margin-bottom: var(--space-2);
-}
-
-.empty-description {
-  color: var(--text-muted);
-  margin-bottom: var(--space-6);
+.loading-text {
+  margin-top: var(--space-4);
+  font-size: 1rem;
 }
 </style>

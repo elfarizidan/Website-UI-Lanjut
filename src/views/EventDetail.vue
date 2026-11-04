@@ -1,13 +1,14 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useEvents } from '@/composables/useEvents'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 
 const route = useRoute()
 const router = useRouter()
-const { getEventById, isUserRegistered } = useEvents()
+const { getEventById, isUserRegistered, isEventsLoading, eventsError } = useEvents()
 
 const event = computed(() => getEventById(route.params.id))
 const isRegistered = computed(() => (event.value ? isUserRegistered(event.value.id) : false))
@@ -181,47 +182,13 @@ const isRegistered = computed(() => (event.value ? isUserRegistered(event.value.
   margin-bottom: var(--space-6);
 }
 
-.btn-register {
-  width: 100%;
-  padding: var(--space-4);
-}
-
-.btn-register:disabled {
-  background: var(--bg-gray);
+/* Loading state styles */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
   color: var(--text-muted);
-  border-color: var(--border-color);
-  cursor: not-allowed;
-}
-
-.not-found-card {
-  background: var(--bg-light);
-  border: 1px dashed var(--border-color);
-  border-radius: var(--space-4);
-  padding: var(--space-12) var(--space-6);
-  text-align: center;
-  max-width: 400px;
-  margin: var(--space-12) auto;
-}
-
-.not-found-icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-4);
-}
-
-.not-found-card h2 {
-  font-size: 1.5rem;
-  color: var(--text-main);
-  margin-bottom: var(--space-2);
-}
-
-.not-found-card p {
-  color: var(--text-muted);
-  margin-bottom: var(--space-6);
-}
-
-@media (max-width: 900px) {
-  .grid-asymmetric {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

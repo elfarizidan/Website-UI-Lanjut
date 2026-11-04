@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useEvents } from '@/composables/useEvents'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppModal from '@/components/ui/AppModal.vue'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import ErrorBanner from '@/components/ui/ErrorBanner'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,12 +17,13 @@ const activeTicket = computed(() =>
 )
 const event = computed(() => getEventById(eventId.value))
 const isCancelModalOpen = ref(false)
+const isTicketLoading = ref(true)
 
-const handleConfirmCancel = () => {
-  cancelRegistration(eventId.value)
-  isCancelModalOpen.value = false
-  router.push('/browse/your-events')
-}
+// Load ticket data from API on mount
+;(async () => {
+  await useEvents().getMyRegistrations()
+  isTicketLoading.value = false
+})()
 </script>
 
 <template>
@@ -35,12 +38,13 @@ const handleConfirmCancel = () => {
           <span :class="['status-badge', event.done ? 'badge-concluded' : 'badge-confirmed']">
             {{ event.done ? 'Event Concluded' : 'Confirmed Pass' }}
           </span>
-          <span class="ref-code">#{{ activeTicket.bookingCode }}</span>
+          <span class="ref-code">#{{ activeTicket?.bookingCode }}</span>
         </div>
+
         <p class="receipt-meta-date">
           Registered on
           {{
-            new Date(activeTicket.registeredAt).toLocaleDateString('en-US', {
+            new Date(activeTicket?.registeredAt).toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
               year: 'numeric',
@@ -48,6 +52,11 @@ const handleConfirmCancel = () => {
           }}
         </p>
       </header>
+
+      <div v-if="isTicketLoading" class="loading-state">
+        <LoadingSpinner />
+        <p class="loading-text">Memuat detail tiket...</p>
+      </div>
 
       <section class="receipt-section">
         <h2 class="event-title">{{ event.title }}</h2>
@@ -293,5 +302,16 @@ const handleConfirmCancel = () => {
 .notice-card p {
   color: var(--text-muted);
   margin-bottom: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .receipt-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .btn-cancel-reg {
+    margin-top: var(--space-3);
+  }
 }
 </style>
