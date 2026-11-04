@@ -57,9 +57,7 @@ const handleRegister = async (participantData) => {
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     // Cek ulang registrasi
-    const isRegNow = event.value
-      ? Boolean(getRegistrationByEventId(event.value.id))
-      : false
+    const isRegNow = event.value ? Boolean(getRegistrationByEventId(event.value.id)) : false
 
     if (isRegNow) {
       // Sukses - tampilkan modal konfirmasi

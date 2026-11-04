@@ -4,8 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useEvents } from '@/composables/useEvents'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppModal from '@/components/ui/AppModal.vue'
-import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import ErrorBanner from '@/components/ui/ErrorBanner'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
+import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 
 const route = useRoute()
 const router = useRouter()

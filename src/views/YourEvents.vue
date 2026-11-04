@@ -5,8 +5,8 @@ import { useEvents } from '@/composables/useEvents'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppModal from '@/components/ui/AppModal.vue'
-import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import ErrorBanner from '@/components/ui/ErrorBanner'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
+import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 
 const router = useRouter()
 const { userRegistrations, getEventById, cancelRegistration } = useEvents()
@@ -21,7 +21,7 @@ const tickets = computed(() =>
       ...registration,
       event: getEventById(registration.eventId),
     }))
-    .filter((registration) => registration.event)
+    .filter((registration) => registration.event),
 )
 
 const handleConfirmCancel = () => {
@@ -73,7 +73,9 @@ const handleCloseCancel = () => {
           <div class="card-top">
             <div class="top-left">
               <span class="category-badge">{{ ticket.event.cat }}</span>
-              <span :class="['lifecycle-tag', ticket.event.done ? 'tag-concluded' : 'tag-upcoming']">
+              <span
+                :class="['lifecycle-tag', ticket.event.done ? 'tag-concluded' : 'tag-upcoming']"
+              >
                 {{ ticket.event.done ? 'Concluded' : 'Upcoming' }}
               </span>
             </div>
@@ -109,7 +111,9 @@ const handleCloseCancel = () => {
         <div class="empty-illustration">🎫</div>
         <h2>No Events Registered Yet</h2>
         <p>Browse active events and register to start collecting tickets.</p>
-        <AppButton variant="primary" @click="router.push('/browse/events')">Browse Events</AppButton>
+        <AppButton variant="primary" @click="router.push('/browse/events')"
+          >Browse Events</AppButton
+        >
       </div>
     </div>
 

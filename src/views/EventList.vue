@@ -6,8 +6,8 @@ import SearchBar from '@/components/event/SearchBar.vue'
 import CategoryFilter from '@/components/event/CategoryFilter.vue'
 import EventCard from '@/components/event/EventCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner.vue'
-import { ErrorBanner } from '@/components/ui/ErrorBanner.vue'
+import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
+import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 
 const router = useRouter()
 const { activeEvents, isUserRegistered, isEventsLoading, eventsError } = useEvents()
@@ -24,8 +24,7 @@ const filteredEvents = computed(() => {
       event.title.toLowerCase().includes(query) ||
       event.loc.toLowerCase().includes(query) ||
       event.desc.toLowerCase().includes(query)
-    const matchCat =
-      selectedCategory.value === 'All' || event.cat === selectedCategory.value
+    const matchCat = selectedCategory.value === 'All' || event.cat === selectedCategory.value
 
     return matchSearch && matchCat
   })

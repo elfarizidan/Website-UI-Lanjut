@@ -45,7 +45,10 @@ const loadEventsFromApi = async () => {
     if (data && Array.isArray(data)) {
       events.value = data
       // Sync to localStorage too for backward compat
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: data, registrations: userRegistrations.value }))
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ events: data, registrations: userRegistrations.value }),
+      )
     }
   } catch (err) {
     console.error('Failed to load events from API, falling back to localStorage:', err)
@@ -199,9 +202,7 @@ const getEventById = (id) => {
 
 const getRegistrationByEventId = (eventId) => {
   // Coba ambil dari API
-  const registration = userRegistrations.value.find(
-    (r) => r.eventId === Number(eventId),
-  )
+  const registration = userRegistrations.value.find((r) => r.eventId === Number(eventId))
 
   // Jika tidak ada di state lokal, coba dari localStorage
   if (!registration) {
@@ -221,9 +222,7 @@ const isUserRegistered = (eventId) => {
 
 const cancelRegistration = (eventId) => {
   const id = Number(eventId)
-  const registrationIndex = userRegistrations.value.findIndex(
-    (r) => r.eventId === id,
-  )
+  const registrationIndex = userRegistrations.value.findIndex((r) => r.eventId === id)
   if (registrationIndex === -1) return false
 
   const event = events.value.find((item) => item.id === id)
@@ -262,21 +261,17 @@ const deleteEvent = (id) => {
   const idx = events.value.findIndex((e) => e.id === Number(id))
   if (idx !== -1) {
     events.value.splice(idx, 1)
-    userRegistrations.value = userRegistrations.value.filter(
-      (r) => r.eventId !== Number(id),
-    )
+    userRegistrations.value = userRegistrations.value.filter((r) => r.eventId !== Number(id))
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ events: events.value, registrations: userRegistrations.value }),
     )
 
     // Hapus dari API
-    api
-      .cancelRegistration(Number(id))
-      .catch((err) => {
-        console.error('Delete event from API failed:', err)
-        // Data tetap dihapus dari local state meskipun API gagal
-      })
+    api.cancelRegistration(Number(id)).catch((err) => {
+      console.error('Delete event from API failed:', err)
+      // Data tetap dihapus dari local state meskipun API gagal
+    })
   }
 }
 
