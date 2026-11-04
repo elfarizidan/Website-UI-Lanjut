@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useEvents } from '@/composables/useEvents'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -8,10 +8,15 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 
 const route = useRoute()
 const router = useRouter()
-const { getEventById, isUserRegistered, isEventsLoading, eventsError } = useEvents()
+const { getEventById, isUserRegistered, fetchEventById, loading, error } = useEvents()
 
 const event = computed(() => getEventById(route.params.id))
 const isRegistered = computed(() => (event.value ? isUserRegistered(event.value.id) : false))
+
+// Meminta detail data acara ke server jika belum ada di memori
+onMounted(async () => {
+  await fetchEventById(route.params.id)
+})
 </script>
 
 <template>
@@ -76,9 +81,11 @@ const isRegistered = computed(() => (event.value ? isUserRegistered(event.value.
 
   <div v-else class="not-found-card">
     <div class="not-found-icon">🔍</div>
-    <h2>Event Not Found</h2>
-    <p>The event you are looking for does not exist or has been removed.</p>
-    <AppButton variant="primary" @click="router.push('/browse/events')">Back to Events</AppButton>
+    <h2>404 Event Not Found</h2>
+    <p>{{ error || 'Acara yang Anda cari tidak tersedia atau sudah dihapus.' }}</p>
+    <AppButton variant="primary" @click="$router.push('/browse/events')">
+      Back to Events
+    </AppButton>
   </div>
 </template>
 
@@ -160,6 +167,16 @@ const isRegistered = computed(() => (event.value ? isUserRegistered(event.value.
   line-height: 1.8;
 }
 
+/* Loading state styles */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: var(--text-muted);
+}
+
 /* FOCAL POINT CARD: box design comes from <AppCard> */
 .ticket-card {
   padding: var(--space-8);
@@ -180,15 +197,5 @@ const isRegistered = computed(() => (event.value ? isUserRegistered(event.value.
 .ticket-desc {
   color: var(--text-muted);
   margin-bottom: var(--space-6);
-}
-
-/* Loading state styles */
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 300px;
-  color: var(--text-muted);
 }
 </style>

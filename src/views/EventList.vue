@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useEvents } from '@/composables/useEvents'
 import SearchBar from '@/components/event/SearchBar.vue'
 import CategoryFilter from '@/components/event/CategoryFilter.vue'
@@ -10,7 +9,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 import ErrorBanner from '@/components/ui/ErrorBanner.vue'
 
 const router = useRouter()
-const { activeEvents, isUserRegistered, isEventsLoading, eventsError } = useEvents()
+const { activeEvents, isUserRegistered, loading, error, fetchEvents } = useEvents()
 
 const searchQuery = ref('')
 const selectedCategory = ref('All')
@@ -31,13 +30,13 @@ const filteredEvents = computed(() => {
 })
 
 onMounted(() => {
-  // Events already loaded from useEvents init
+  fetchEvents()
 })
 </script>
 
 <template>
   <div class="event-list-page">
-    <div class="header-section">
+    <div class="header-top">
       <h2 class="section-title">Upcoming Events</h2>
       <p class="section-desc">
         Discover workshops, seminars, tech meetups, and competitions near you.
@@ -51,7 +50,7 @@ onMounted(() => {
     />
 
     <!-- LAYOUT SYSTEM: ADAPTIVE GRID -->
-    <div v-if="isEventsLoading" class="loading-state">
+    <div v-if="loading" class="loading-state">
       <LoadingSpinner />
       <p class="loading-text">Memuat acara...</p>
     </div>
@@ -63,7 +62,7 @@ onMounted(() => {
           :key="event.id"
           :event="event"
           :is-registered="isUserRegistered(event.id)"
-          @view-detail="$router.push('/browse/events/' + event.id)"
+          @view-detail="$router.push('/browse/events/' + event.id)'
         />
       </div>
 
@@ -73,18 +72,18 @@ onMounted(() => {
         <p class="empty-description">
           Be the first to publish your own event from the organizer dashboard
         </p>
-        <AppButton variant="primary" @click="$router.push('/dashboard/events')"
-          >Create Your First Event</AppButton
-        >
+        <AppButton variant="primary" @click="$router.push('/dashboard/events')">
+          Create Your First Event
+        </AppButton>
       </div>
     </template>
 
     <!-- ERROR BANNER -->
     <ErrorBanner
-      v-if="eventsError"
+      v-if="error"
       :is-open="true"
-      :errorMessage="eventsError"
-      @retry="loadEventsFromApi"
+      :errorMessage="error"
+      @retry="fetchEvents"
     />
   </div>
 </template>

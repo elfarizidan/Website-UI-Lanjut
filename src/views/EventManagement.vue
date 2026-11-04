@@ -14,6 +14,7 @@ const currentTab = ref('active')
 const isModalOpen = ref(false)
 const selectedEvent = ref(null)
 const modalAction = ref('complete')
+const isSubmitting = ref(false)
 
 const handleOpenCompleteModal = (event) => {
   selectedEvent.value = event
@@ -27,16 +28,28 @@ const handleOpenDeleteModal = (event) => {
   isModalOpen.value = true
 }
 
-const handleConfirmModal = () => {
+const handleConfirmModal = async () => {
   if (!selectedEvent.value) return
 
   if (modalAction.value === 'complete') {
-    completeEvent(selectedEvent.value.id)
-  } else {
-    deleteEvent(selectedEvent.value.id)
+    isProcessingAction.value = true
+    try {
+      await completeEvent(selectedEvent.value.id)
+    } finally {
+      isProcessingAction.value = false
+      isModalOpen.value = false
+      selectedEvent.value = null
+    }
+  } else if (modalAction.value === 'delete') {
+    isProcessingAction.value = true
+    try {
+      await deleteEvent(selectedEvent.value.id)
+    } finally {
+      isProcessingAction.value = false
+      isModalOpen.value = false
+      selectedEvent.value = null
+    }
   }
-
-  handleCancelModal()
 }
 
 const handleCancelModal = () => {
@@ -44,11 +57,19 @@ const handleCancelModal = () => {
   selectedEvent.value = null
 }
 
-const handleCreateEvent = (eventData) => {
-  createEvent(eventData)
-  setTimeout(() => {
+const handleCreateEvent = async (eventData) => {
+  isSubmitting.value = true
+  try {
+    await createEvent(eventData)
+    if (createFormRef.value) {
+      createFormRef.value.resetForm()
+    }
     currentTab.value = 'active'
-  }, 1000)
+  } catch (err) {
+    alert(err.message || 'Gagal menyimpan acara ke server REST API')
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 
@@ -93,7 +114,11 @@ const handleCreateEvent = (eventData) => {
     </section>
 
     <section v-if="currentTab === 'create'">
-      <EventCreateForm @submit="handleCreateEvent" @cancel="currentTab = 'active'" />
+      <EventCreateForm
+        @submit="handleCreateEvent"
+        @cancel="currentTab = 'active'"
+        ref="createFormRef"
+      />
     </section>
 
     <section v-if="currentTab === 'completed'">

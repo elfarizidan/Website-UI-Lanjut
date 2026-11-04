@@ -1,317 +1,315 @@
-import { ref, computed } from 'vue'
-import { useApi } from '@/composables/useApi'
+import { ref, computed, watch } from 'vue'
 
-const STORAGE_KEY = 'gatherly_events'
-const api = useApi()
+// STORAGE KEYS
+const EVENTS_STORAGE_KEY = 'gatherly_events'
+const REGISTRATIONS_STORAGE_KEY = 'gatherly_user_registrations'
 
-// Handle both old format (plain array) and new format (object with events + registrations)
-let parsedData
-try {
-  parsedData = localStorage.getItem(STORAGE_KEY)
-    ? JSON.parse(localStorage.getItem(STORAGE_KEY))
-    : []
-} catch (e) {
-  parsedData = []
+// REST API CONFIGURATION
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL
+  return envUrl ? envUrl.trim().replace(/\/+$/, '') : ''
 }
 
-// If old format (array), convert to new format (object)
-let eventsArray
-let registrationsArray
+// STATE SINGLETON TERPUSAT
+const savedData = localStorage.getItem(EVENTS_STORAGE_KEY)
+const events = ref(savedData ? JSON.parse(savedData) : [])
 
-if (Array.isArray(parsedData)) {
-  // Old Modul 4 format: just an array of events
-  eventsArray = parsedData
-  registrationsArray = []
-} else if (parsedData && parsedData.events) {
-  // New format: { events, registrations }
-  eventsArray = parsedData.events
-  registrationsArray = parsedData.registrations || []
-} else {
-  // Fallback to empty
-  eventsArray = []
-  registrationsArray = []
-}
+const savedRegs = localStorage.getItem(REGISTRATIONS_STORAGE_KEY)
+const userRegistrations = ref(savedRegs ? JSON.parse(savedRegs) : [])
 
-const events = ref(eventsArray)
-const userRegistrations = ref(registrationsArray)
+// ASYNCHRONOUS NETWORK STATES (MODUL 6)
+const loading = ref(false)
+const error = ref(null)
 
-// --- API INTEGRATION ---
-// Try to fetch from API first, fallback to localStorage if API fails
-// This maintains backward compatibility while adding API support
-
-const loadEventsFromApi = async () => {
-  try {
-    const data = await api.getEvents(false) // false = no mock, use real API or localStorage fallback
-    if (data && Array.isArray(data)) {
-      events.value = data
-      // Sync to localStorage too for backward compat
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ events: data, registrations: userRegistrations.value }),
-      )
-    }
-  } catch (err) {
-    console.error('Failed to load events from API, falling back to localStorage:', err)
-    // Keep using localStorage if API fails
-  }
-}
-
-const loadRegistrationsFromApi = async () => {
-  try {
-    const data = await api.getMyRegistrations()
-    if (data && Array.isArray(data)) {
-      userRegistrations.value = data
-    }
-  } catch (err) {
-    console.error('Failed to load registrations from API, falling back to localStorage:', err)
-  }
-}
-
-// Initial load - try API first
-;(async () => {
-  await loadEventsFromApi()
-  await loadRegistrationsFromApi()
-})()
-
-const totalEvents = computed(() => events.value.length)
-const activeEvents = computed(() => events.value.filter((e) => !e.done))
-const completedEvents = computed(() => events.value.filter((e) => e.done))
-const userRegistrationsCount = computed(() => userRegistrations.value.length)
-
+// WATCHERS (Sinkronisasi status Lokal ke LocalStorage sebagai cache preferensi)
 watch(
   events,
   (newEvents) => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ events: newEvents, registrations: userRegistrations.value }),
-    )
+    localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(newEvents))
   },
-  { deep: true },
+  { deep: true }
 )
 
 watch(
   userRegistrations,
   (newRegs) => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ events: events.value, registrations: newRegs }),
-    )
+    localStorage.setItem(REGISTRATIONS_STORAGE_KEY, JSON.stringify(newRegs))
   },
-  { deep: true },
+  { deep: true }
 )
 
-// --- API Functions ---
-
-const createEvent = (eventData) => {
-  // Simpan ke dulu di localStorage, lalu kirim ke API
-  const newEvent = {
-    id: Date.now(),
-    title: eventData.title,
-    date: eventData.date,
-    loc: eventData.loc.startsWith('🍍 ') ? eventData.loc : `📍 ${eventData.loc}`,
-    cat: eventData.cat,
-    quota: Number(eventData.quota) || 100,
-    price: eventData.price || 'Free',
-    desc: eventData.desc,
-    done: false,
-  }
-
-  events.value.unshift(newEvent)
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ events: events.value, registrations: userRegistrations.value }),
-  )
-
-  // Coba kirim ke API (non-blocking - jika gagal, data tetap ada di localStorage)
-  api
-    .registerAttendee(newEvent.id, {
-      fullName: eventData.organizerName || 'Organizer',
-      email: eventData.organizerEmail || '',
-      phone: eventData.organizerPhone || '',
-      dob: eventData.organizerDob || '',
-      reason: 'Event created',
-    })
-    .catch((err) => {
-      console.log('API register failed (event created locally):', err)
-    })
-
-  return newEvent
-}
-
-const registerAttendee = (eventId, participantData) => {
-  const event = events.value.find((e) => e.id === Number(eventId))
-  if (!event || event.quota <= 0) return null
-
-  // Kurangi quota lokal dulu untuk UI yang cepat
-  event.quota -= 1
-
-  // Kirim ke API
-  api
-    .registerAttendee(eventId, {
-      ...participantData,
-      eventTitle: event.title,
-    })
-    .then((response) => {
-      // Sukses dari API - tambah registrasi ke local state
-      const bookingCode = response.bookingCode || 'GTH-' + Date.now().toString().slice(-4)
-      const regRecord = {
-        id: Date.now(),
-        eventId: Number(eventId),
-        bookingCode,
-        registeredAt: new Date().toISOString(),
-        ...participantData,
-      }
-
-      userRegistrations.value.unshift(regRecord)
-
-      // Update localStorage
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ events: events.value, registrations: userRegistrations.value }),
-      )
-
-      // Panggil callback jika ada (untuk views yang butuh response)
-      if (window.onRegistrationSuccess) {
-        window.onRegistrationSuccess(response)
-      }
-    })
-    .catch((err) => {
-      // API gagal - kembali kan quota lokal
-      event.quota += 1
-
-      console.error('Registration API failed, rolled back quota:', err)
-
-      // Coba simpan ke localStorage saja sebagai fallback
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ events: events.value, registrations: userRegistrations.value }),
-      )
-    })
-
-  return { event, pending: true } // Return pending state
-}
-
-const getEventById = (id) => {
-  // Coba ambil dari API dulu
-  const apiEvent = api.getEventById(id, true) // true = return mock jika gagal
-  const localEvent = events.value.find((e) => e.id === Number(id))
-
-  // Return API event jika ada, else local event
-  return apiEvent ? apiEvent : localEvent
-}
-
-const getRegistrationByEventId = (eventId) => {
-  // Coba ambil dari API
-  const registration = userRegistrations.value.find((r) => r.eventId === Number(eventId))
-
-  // Jika tidak ada di state lokal, coba dari localStorage
-  if (!registration) {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const data = JSON.parse(stored)
-      return data.registrations?.find((r) => r.eventId === Number(eventId))
-    }
-  }
-
-  return registration
-}
-
-const isUserRegistered = (eventId) => {
-  return userRegistrations.value.some((r) => r.eventId === Number(eventId))
-}
-
-const cancelRegistration = (eventId) => {
-  const id = Number(eventId)
-  const registrationIndex = userRegistrations.value.findIndex((r) => r.eventId === id)
-  if (registrationIndex === -1) return false
-
-  const event = events.value.find((item) => item.id === id)
-  if (event) event.quota = Number(event.quota || 0) + 1
-
-  // Hapus dari state lokal
-  userRegistrations.value.splice(registrationIndex, 1)
-
-  // Kirim ke API
-  api
-    .cancelRegistration(id)
-    .then(() => {
-      // Success - already removed from state
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ events: events.value, registrations: userRegistrations.value }),
-      )
-    })
-    .catch((err) => {
-      console.error('Cancel registration API failed:', err)
-      // Rollback - tambahkan registrasi kembali kalau API gagal
-      userRegistrations.value.unshift({
-        id,
-        eventId: id,
-        bookingCode: '',
-        registeredAt: new Date().toISOString(),
-        ...(userRegistrations.value[registrationIndex] || {}),
-      })
-      if (event) event.quota = Number(event.quota || 0) - 1
-    })
-
-  return true
-}
-
-const deleteEvent = (id) => {
-  const idx = events.value.findIndex((e) => e.id === Number(id))
-  if (idx !== -1) {
-    events.value.splice(idx, 1)
-    userRegistrations.value = userRegistrations.value.filter((r) => r.eventId !== Number(id))
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ events: events.value, registrations: userRegistrations.value }),
-    )
-
-    // Hapus dari API
-    api.cancelRegistration(Number(id)).catch((err) => {
-      console.error('Delete event from API failed:', err)
-      // Data tetap dihapus dari local state meskipun API gagal
-    })
-  }
-}
-
-const clearAllEvents = () => {
-  events.value = []
-  userRegistrations.value = []
-  localStorage.removeItem(STORAGE_KEY)
-}
-
 export function useEvents() {
+  // DERIVED STATE (Dihitung otomatis menggunakan computed)
   const totalEvents = computed(() => events.value.length)
   const activeEvents = computed(() => events.value.filter((e) => !e.done))
   const completedEvents = computed(() => events.value.filter((e) => e.done))
-  const userRegistrationsCount = computed(() => userRegistrations.value.length)
-  const isEventsLoading = api.isLoading
-  const eventsError = api.error
+  const totalRegistrations = computed(() => userRegistrations.value.length)
+
+  // 1. HTTP GET: MENGAMBIL SELURUH DATA ACARA DARI REST API
+  const fetchEvents = async () => {
+    loading.value = true
+    error.value = null
+    const baseUrl = getApiBaseUrl()
+
+    // Validasi apakah endpoint MockAPI sudah dikonfigurasi di file .env
+    if (!baseUrl || baseUrl.includes('67xxxxxx')) {
+      loading.value = false
+      error.value = 'Alamat REST API belum dikonfigurasi. Silakan masukkan URL MockAPI Anda pada berkas .env (contoh: https://67xxxx.mockapi.io/api/v1).'
+      return
+    }
+
+    try {
+      const response = await fetch(`${baseUrl}/events`)
+      if (!response.ok) {
+        throw new Error(`Gagal memuat data dari server (Status HTTP: ${response.status}) ${response.statusText || ''}`)
+      }
+      const data = await response.json()
+      events.value = Array.isArray(data) ? data : []
+    } catch (err) {
+      error.value = err.message || 'Terjadi kegagalan jaringan saat menghubungi server API.'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 2. HTTP GET BY ID: MENGAMBIL RINCIAN ACARA BERDASARKAN ID
+  const fetchEventById = async (id) => {
+    if (!id) return null
+    const strId = String(id)
+
+    // Cek terlebih dahulu di memory state
+    const existing = events.value.find((e) => String(e.id) === strId)
+    if (existing) return existing
+
+    const baseUrl = getApiBaseUrl()
+    if (!baseUrl || baseUrl.includes('67xxxxxx')) {
+      return null
+    }
+
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await fetch(`${baseUrl}/events/${strId}`)
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Acara tidak ditemukan pada sistem server.')
+        }
+        throw new Error(`Gagal mengambil detail acara (Status HTTP: ${response.status})`)
+      }
+      const eventData = await response.json()
+
+      // Simpan ke daftar state jika belum ada
+      if (!events.value.some((e) => String(e.id) === String(eventData.id))) {
+        events.value.push(eventData)
+      }
+      return eventData
+    } catch (err) {
+      error.value = err.message
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 3. HTTP POST: MEMBUAT DATA ACARA BARU KE REST API
+  const createEvent = async (eventData) => {
+    loading.value = true
+    error.value = null
+    const cleanLoc = (eventData.loc || '').replace(/\s+/, ' ').trim()
+
+    const payload = {
+      title: eventData.title.trim(),
+      date: eventData.date,
+      loc: cleanLoc,
+      cat: eventData.cat,
+      quota: Number(eventData.quota) || 100,
+      price: eventData.price || 'Free',
+      desc: eventData.desc.trim(),
+      done: false
+    }
+
+    const baseUrl = getApiBaseUrl()
+    try {
+      // Jika endpoint sudah aktif, kirim HTTP POST
+      if (baseUrl && !baseUrl.includes('67xxxxxx')) {
+        const response = await fetch(`${baseUrl}/events`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+          throw new Error(`Gagal menyimpan acara ke server (Status HTTP: ${response.status})`)
+        }
+
+        const createdEvent = await response.json()
+        events.value.unshift(createdEvent)
+        return createdEvent
+      } else {
+        // Simulasi jika belum terhubung MockAPI
+        const localCreated = { ...payload, id: String(Date.now()) }
+        events.value.unshift(localCreated)
+        return localCreated
+      }
+    } catch (err) {
+      error.value = err.message || 'Gagal menyimpan data ke server API'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 4. HTTP DELETE: MENGHAPUS ACARA DARI SERVER & MEMBERSIHKAN TIKET TERKAIT
+  const deleteEvent = async (id) => {
+    const strId = String(id)
+    loading.value = true
+    error.value = null
+
+    const baseUrl = getApiBaseUrl()
+
+    try {
+      if (baseUrl && !baseUrl.includes('67xxxxxx')) {
+        const response = await fetch(`${baseUrl}/events/${strId}`, {
+          method: 'DELETE'
+        })
+
+        if (!response.ok && response.status !== 404) {
+          throw new Error(`Gagal menghapus acara dari server (Status HTTP: ${response.status})`)
+        }
+      }
+
+      // Hapus data dari state lokal
+      events.value = events.value.filter((e) => String(e.id) !== strId)
+      // Cascading cleanup untuk tiket pendaftaran
+      userRegistrations.value = userRegistrations.value.filter((r) => String(r.eventId) !== strId)
+    } catch (err) {
+      error.value = err.message || 'Gagal menghapus acara dari server'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 5. MUTASI STATE: TANDAI ACARA SELESAI
+  const completeEvent = async (id) => {
+    const strId = String(id)
+    const target = events.value.find((e) => String(e.id) === strId)
+    if (target) {
+      target.done = true
+
+      const baseUrl = getApiBaseUrl()
+      if (baseUrl && !baseUrl.includes('67xxxxxx')) {
+        try {
+          await fetch(`${baseUrl}/events/${strId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ done: true })
+          })
+        } catch (err) {
+          console.warn('Gagal memperbarui status selesai di server:', err)
+        }
+      }
+    }
+  }
+
+  // 6. PENCARIAN DATA SINKRON DARI STATE
+  const getEventById = (id) => {
+    return events.value.find((e) => String(e.id) === String(id))
+  }
+
+  // 7. PENDAFTARAN PESERTA
+  const registerAttendee = (eventId, participantData) => {
+    const strId = String(eventId)
+    const event = events.value.find((e) => String(e.id) === strId)
+
+    if (!event || event.quota <= 0) return null
+
+    const bookingCode = 'GTH-' + Date.now().toString().slice(-4)
+    const regRecord = {
+      id: Date.now(),
+      eventId: strId,
+      eventTitle: event.title,
+      eventCat: event.cat,
+      eventDate: event.date,
+      eventLoc: event.loc,
+      bookingCode,
+      registeredAt: new Date().toISOString(),
+      fullName: participantData.fullName.trim(),
+      email: participantData.email.trim(),
+      phone: participantData.phone.trim(),
+      dob: participantData.dob,
+      reason: participantData.reason.trim()
+    }
+
+    // Kurangi kuota event secara reaktif
+    event.quota = Math.max(0, event.quota - 1)
+    // Simpan pendaftaran ke riwayat registrasi pengguna
+    userRegistrations.value.unshift(regRecord)
+    return regRecord
+  }
+
+  // 8. HELPER CEK STATUS PENDAFTARAN
+  const isUserRegistered = (eventId) => {
+    const strId = String(eventId)
+    const eventExists = events.value.some((e) => String(e.id) === strId)
+    if (!eventExists) return false
+    return userRegistrations.value.some((r) => String(r.eventId) === strId)
+  }
+
+  // 9. MENGAMBIL DATA TIKET BERDASARKAN EVENT ID
+  const getRegistrationByEventId = (eventId) => {
+    return userRegistrations.value.find((r) => String(r.eventId) === String(eventId))
+  }
+
+  // 10. PEMBATALAN PENDAFTARAN
+  const cancelRegistration = (eventId) => {
+    const strId = String(eventId)
+    const regIdx = userRegistrations.value.findIndex((r) => String(r.eventId) === strId)
+    if (regIdx !== -1) {
+      userRegistrations.value.splice(regIdx, 1)
+      const event = events.value.find((e) => String(e.id) === strId)
+      if (event) {
+        event.quota += 1
+      }
+      return true
+    }
+    return false
+  }
+
+  // 11. RESET DATA PENGUJIAN PRAKTIKUM
+  const clearAllEvents = () => {
+    events.value = []
+    localStorage.removeItem(EVENTS_STORAGE_KEY)
+  }
+
+  const clearAllRegistrations = () => {
+    userRegistrations.value = []
+    localStorage.removeItem(REGISTRATIONS_STORAGE_KEY)
+  }
 
   return {
     events,
+    loading,
+    error,
     totalEvents,
     activeEvents,
     completedEvents,
     userRegistrations,
-    userRegistrationsCount,
-    isEventsLoading,
-    eventsError,
+    totalRegistrations,
+    fetchEvents,
+    fetchEventById,
     createEvent,
-    registerAttendee,
-    getEventById,
-    getRegistrationByEventId,
-    isUserRegistered,
-    cancelRegistration,
     deleteEvent,
+    completeEvent,
+    getEventById,
+    registerAttendee,
+    isUserRegistered,
+    getRegistrationByEventId,
+    cancelRegistration,
     clearAllEvents,
-    // API helper functions
-    getEvents: api.getEvents,
-    getEventById: api.getEventById,
-    registerAttendee: api.registerAttendee,
-    getMyRegistrations: api.getMyRegistrations,
-    cancelRegistration: api.cancelRegistration,
-    request: api.request,
+    clearAllRegistrations
   }
 }

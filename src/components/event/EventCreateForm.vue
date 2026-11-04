@@ -36,9 +36,52 @@ const formatEventDate = (dateString) => {
   return `${formattedDate} ${formattedTime}`
 }
 
+const validateField = (field) => {
+  switch (field) {
+    case 'title':
+      if (!form.title.trim()) {
+        errors.title = 'Event title is required.'
+      } else if (form.title.trim().length < 3) {
+        errors.title = 'Event title must be at least 3 characters.'
+      } else {
+        errors.title = ''
+      }
+      break
+    case 'date':
+      errors.date = !form.date ? 'Event date and time is required.' : ''
+      break
+    case 'loc':
+      errors.loc = !form.loc.trim() ? 'Event location is required.' : ''
+      break
+    case 'quota':
+      errors.quota = !form.quota || Number(form.quota) < 1 ? 'Quota must be at least 1 attendee.' : ''
+      break
+    case 'desc':
+      errors.desc = !form.desc.trim() ? 'Event description is required.' : ''
+      break
+  }
+}
+
+const errors = {
+  title: '',
+  date: '',
+  loc: '',
+  quota: '',
+  desc: '',
+}
+
 const handleSubmitEvent = () => {
-  if (!form.title.trim() || !form.date || !form.loc.trim() || !form.desc.trim()) {
-    errorMessage.value = 'Please fill in all required fields before publishing the event!'
+  // Validate all fields
+  validateField('title')
+  validateField('date')
+  validateField('loc')
+  validateField('quota')
+  validateField('desc')
+
+  const hasError = Object.values(errors).some((e) => e !== '')
+
+  if (hasError) {
+    errorMessage.value = 'Please correct the highlighted fields below.'
     successMessage.value = ''
     return
   }
