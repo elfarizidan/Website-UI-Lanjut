@@ -18,6 +18,7 @@ const menus = [
       { name: 'Category', path: '/browse/category' },
     ],
   },
+  { name: 'Your Events', path: '/browse/your-events' },
   { name: 'Contact', path: '/contact' },
 ]
 const handleScroll = () => {

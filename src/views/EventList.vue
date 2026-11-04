@@ -8,7 +8,7 @@ import EventCard from '@/components/event/EventCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 
 const router = useRouter()
-const { activeEvents } = useEvents()
+const { activeEvents, isUserRegistered } = useEvents()
 
 const searchQuery = ref('')
 const selectedCategory = ref('All')
@@ -50,6 +50,7 @@ const filteredEvents = computed(() => {
         v-for="event in filteredEvents"
         :key="event.id"
         :event="event"
+        :is-registered="isUserRegistered(event.id)"
         @view-detail="$router.push('/browse/events/' + event.id)"
       />
     </div>
